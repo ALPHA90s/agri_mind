@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agri-Mind Prototype (Android)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+    .app-container {
+      max-width: 420px;
+      height: 800px;
+      border: 1px solid #e0e0e0;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #1a73e8; /* Material Blue */
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    /* Material-like input fields */
+    .form-input {
+      background-color: #f5f5f5;
+      border-bottom: 2px solid #bdbdbd;
+      transition: border-bottom-color 0.3s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-bottom-color: #2e7d32; /* Material Green */
+    }
+    /* Fade animation */
+    .fade {
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+    .fade.show {
+      opacity: 1;
+    }
+    .tab-btn {
+        transition: background-color 0.3s, color 0.3s;
+    }
+    .tab-btn.active {
+        background-color: #2e7d32;
+        color: white;
+    }
+    .tab-btn.inactive {
+        background-color: #e0e0e0;
+        color: #333;
+    }
+  </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen">
+  <div
+    id="app"
+    class="app-container mx-auto bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col"
+  >
+    <!-- Header -->
+    <header
+      class="bg-gradient-to-r from-green-700 to-green-600 text-white p-4 shadow-md flex items-center"
+    >
+      <div class="flex-grow">
+        <h1 class="text-xl font-medium text-center">Agri-Mind</h1>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col overflow-y-auto p-6 bg-gray-50">
+      <!-- Tab switcher -->
+       <div class="flex rounded-md shadow-sm mb-6">
+            <button id="yield-tab-btn" class="tab-btn active w-1/2 p-2 rounded-l-md font-medium">Yield Prediction</button>
+            <button id="health-tab-btn" class="tab-btn inactive w-1/2 p-2 rounded-r-md font-medium">Crop Health</button>
+       </div>
+
+      <!-- Yield Prediction View -->
+      <div id="yield-prediction-view">
+          <!-- Input Screen -->
+          <div id="input-screen" class="fade show">
+            <h2 class="text-2xl font-normal text-gray-800 mb-2">
+              Get Your Prediction
+            </h2>
+            <p class="text-gray-600 mb-8">
+              Enter details to receive an AI-driven yield forecast.
+            </p>
+
+            <form id="prediction-form" class="space-y-8">
+              <div>
+                <label
+                  for="location"
+                  class="block text-sm font-medium text-green-800 mb-1"
+                  >Location</label
+                >
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  class="w-full px-4 py-3 border-0 rounded-t-lg form-input"
+                  placeholder="e.g., Pune, Maharashtra"
+                  required
+                />
+              </div>
+
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                    <label
+                    for="crop"
+                    class="block text-sm font-medium text-green-800"
+                    >Select Crop</label
+                    >
+                    <button type="button" id="auto-recommend-btn" class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-md hover:bg-green-300">Auto-Recommend</button>
+                </div>
+                 <p id="recommendation-status" class="text-xs text-gray-500 h-4"></p>
+                <select
+                  id="crop"
+                  name="crop"
+                  class="w-full px-4 py-3 border-0 rounded-t-lg form-input appearance-none"
+                  required
+                >
+                  <option value="">Choose a crop...</option>
+                  <option value="Rice">Rice</option>
+                  <option value="Wheat">Wheat</option>
+                  <option value="Maize">Maize (Corn)</option>
+                  <option value="Sugarcane">Sugarcane</option>
+                  <option value="Cotton">Cotton</option>
+                  <option value="Soybean">Soybean</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                id="submit-btn"
+                disabled
+                class="w-full bg-green-400 cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors duration-300 shadow-md uppercase tracking-wider"
+              >
+                Generate Prediction
+              </button>
+            </form>
+          </div>
+
+          <!-- Loading Screen -->
+          <div
+            id="loading-screen"
+            class="fade hidden flex-col items-center justify-center text-center h-full"
+          >
+            <div class="spinner mb-6"></div>
+            <h3 class="text-lg font-medium text-gray-700">Analyzing Data...</h3>
+            <p class="text-gray-500 mt-2">Running prediction model...</p>
+          </div>
+
+          <!-- Prediction Screen -->
+          <div id="prediction-screen" class="fade hidden">
+            <button
+              id="back-button"
+              class="flex items-center text-green-700 font-medium mb-4"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              New Prediction
+            </button>
+            <h2 class="text-2xl font-normal text-gray-800 mb-1">
+              Prediction Dashboard
+            </h2>
+            <p class="text-gray-600 mb-6">
+              For <strong id="result-location" class="text-gray-800"></strong> -
+              <strong id="result-crop" class="text-gray-800"></strong>
+            </p>
+
+            <!-- Predicted Yield Card -->
+            <div class="bg-white rounded-lg mb-6 shadow-lg border border-gray-100 p-4">
+              <p class="text-sm font-medium text-gray-500">Predicted Yield</p>
+              <p id="predicted-yield" class="text-3xl font-medium text-green-800"></p>
+              <p class="text-sm text-gray-600">Quintals per Hectare</p>
+            </div>
+
+            <!-- Weather & Soil Card -->
+            <div
+              class="bg-white p-4 rounded-lg shadow-lg mb-6 border border-gray-100"
+            >
+              <h3 class="font-medium text-lg text-gray-800 mb-3">Live Insights</h3>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p class="text-gray-500">Temperature</p>
+                  <p id="weather-temp" class="font-medium text-gray-900 text-base"></p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Humidity</p>
+                  <p
+                    id="weather-humidity"
+                    class="font-medium text-gray-900 text-base"
+                  ></p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Rainfall (24h)</p>
+                  <p
+                    id="weather-rainfall"
+                    class="font-medium text-gray-900 text-base"
+                  ></p>
+                </div>
+                <div>
+                  <p class="text-gray-500">Soil Moisture</p>
+                  <p
+                    id="soil-moisture"
+                    class="font-medium text-gray-900 text-base"
+                  ></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actionable Recommendations -->
+            <div>
+              <h3 class="font-medium text-lg text-gray-800 mb-3">Recommendations</h3>
+              <div
+                class="bg-white rounded-lg shadow-lg border border-gray-100 divide-y divide-gray-200"
+              >
+                <div class="flex items-start p-4">
+                  <span class="text-2xl mr-4 mt-1">💧</span>
+                  <div>
+                    <p class="font-medium text-gray-800">Irrigation</p>
+                    <p id="rec-irrigation" class="text-sm text-gray-600"></p>
+                  </div>
+                </div>
+                <div class="flex items-start p-4">
+                  <span class="text-2xl mr-4 mt-1">🌱</span>
+                  <div>
+                    <p class="font-medium text-gray-800">Fertilizer</p>
+                    <p id="rec-fertilizer" class="text-sm text-gray-600"></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <!-- Crop Health View -->
+      <div id="health-check-view" class="hidden">
+        <h2 class="text-2xl font-normal text-gray-800 mb-2">
+            Crop Health Check
+        </h2>
+        <p class="text-gray-600 mb-8">
+            Upload a photo of your crop or soil for an AI health analysis.
+        </p>
+        <form id="health-check-form">
+            <label for="crop-photo-upload" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition-colors duration-300 shadow-md uppercase tracking-wider flex items-center justify-center cursor-pointer">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Upload Photo
+            </label>
+            <input type="file" id="crop-photo-upload" class="hidden" accept="image/*">
+        </form>
+
+        <div id="health-check-loader" class="hidden flex-col items-center justify-center text-center h-full mt-8">
+             <div class="spinner mb-6"></div>
+             <h3 class="text-lg font-medium text-gray-700">Analyzing Image...</h3>
+        </div>
+
+        <div id="health-result-section" class="hidden mt-8">
+             <h3 class="font-medium text-lg text-gray-800 mb-3">Analysis Result</h3>
+             <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4">
+                <img id="image-preview" src="#" alt="Crop Preview" class="rounded-lg mb-4 max-h-60 w-full object-cover"/>
+                <div id="health-analysis-text"></div>
+             </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const predictionForm = document.getElementById('prediction-form');
+      const inputScreen = document.getElementById('input-screen');
+      const loadingScreen = document.getElementById('loading-screen');
+      const predictionScreen = document.getElementById('prediction-screen');
+      const backButton = document.getElementById('back-button');
+      const submitBtn = document.getElementById('submit-btn');
+
+      const yieldTabBtn = document.getElementById('yield-tab-btn');
+      const healthTabBtn = document.getElementById('health-tab-btn');
+      const yieldPredictionView = document.getElementById('yield-prediction-view');
+      const healthCheckView = document.getElementById('health-check-view');
+      const autoRecommendBtn = document.getElementById('auto-recommend-btn');
+      const recommendationStatus = document.getElementById('recommendation-status');
+      const cropSelect = document.getElementById('crop');
+
+      const healthCheckForm = document.getElementById('health-check-form');
+      const cropPhotoUpload = document.getElementById('crop-photo-upload');
+      const healthCheckLoader = document.getElementById('health-check-loader');
+      const healthResultSection = document.getElementById('health-result-section');
+      const imagePreview = document.getElementById('image-preview');
+      const healthAnalysisText = document.getElementById('health-analysis-text');
+
+
+      // --- TAB SWITCHING LOGIC ---
+      function switchTab(activeTab) {
+          if(activeTab === 'yield') {
+              yieldTabBtn.classList.replace('inactive', 'active');
+              healthTabBtn.classList.replace('active', 'inactive');
+              yieldPredictionView.classList.remove('hidden');
+              healthCheckView.classList.add('hidden');
+          } else {
+              healthTabBtn.classList.replace('inactive', 'active');
+              yieldTabBtn.classList.replace('active', 'inactive');
+              healthCheckView.classList.remove('hidden');
+              yieldPredictionView.classList.add('hidden');
+          }
+      }
+      yieldTabBtn.addEventListener('click', () => switchTab('yield'));
+      healthTabBtn.addEventListener('click', () => switchTab('health'));
+
+
+      // --- YIELD PREDICTION LOGIC ---
+
+      // Enable button only when both fields filled
+      predictionForm.addEventListener('input', () => {
+        const location = document.getElementById('location').value.trim();
+        const crop = document.getElementById('crop').value;
+        if (location && crop) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('bg-green-400', 'cursor-not-allowed');
+          submitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+        } else {
+          submitBtn.disabled = true;
+          submitBtn.classList.add('bg-green-400', 'cursor-not-allowed');
+          submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+        }
+      });
+      
+      autoRecommendBtn.addEventListener('click', () => {
+          recommendationStatus.textContent = 'Analyzing conditions...';
+          autoRecommendBtn.disabled = true;
+
+          setTimeout(() => {
+              const crops = Array.from(cropSelect.options).filter(opt => opt.value).map(opt => opt.value);
+              const recommendedCrop = crops[Math.floor(Math.random() * crops.length)];
+              cropSelect.value = recommendedCrop;
+              recommendationStatus.textContent = `Recommended: ${recommendedCrop}`;
+              autoRecommendBtn.disabled = false;
+              // Trigger input event to check form validity
+              predictionForm.dispatchEvent(new Event('input'));
+          }, 1500);
+      });
+
+      function showYieldScreen(screenToShow) {
+        const allScreens = [inputScreen, loadingScreen, predictionScreen];
+        allScreens.forEach(screen => {
+            if (screen === screenToShow) {
+                screen.classList.remove('hidden');
+                if (screen === loadingScreen) {
+                    screen.classList.add('flex');
+                }
+                setTimeout(() => {
+                    screen.classList.add('show');
+                }, 20);
+            } else {
+                screen.classList.add('hidden');
+                screen.classList.remove('show');
+                if (screen === loadingScreen) {
+                    screen.classList.remove('flex');
+                }
+            }
+        });
+      }
+
+      predictionForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const location = document.getElementById('location').value;
+        const crop = document.getElementById('crop').value;
+
+        showYieldScreen(loadingScreen);
+
+        setTimeout(() => {
+          const baseYield = {
+            Rice: 70, Wheat: 60, Maize: 80,
+            Sugarcane: 900, Cotton: 25, Soybean: 30,
+          };
+          const randomFactor = (Math.random() - 0.2) * 10;
+          const predictedYield = (baseYield[crop] + randomFactor).toFixed(1);
+          const temp = (25 + Math.random() * 10).toFixed(1);
+          const humidity = (60 + Math.random() * 25).toFixed(0);
+          const rainfall = (Math.random() * 15).toFixed(1);
+          const soilMoisture = (30 + Math.random() * 40).toFixed(0);
+
+          let irrigationRec = 'Standard irrigation schedule is sufficient.';
+          if (soilMoisture < 45 && rainfall < 5) {
+            irrigationRec = 'Soil is dry. Immediate irrigation recommended to avoid crop stress.';
+          } else if (soilMoisture > 75) {
+            irrigationRec = 'Soil is saturated. Pause irrigation for 2-3 days.';
+          }
+          let fertilizerRec = 'Apply a balanced NPK fertilizer as per the standard schedule.';
+          if (crop === 'Maize' && predictedYield < 75) {
+            fertilizerRec = 'Yield is slightly below potential. Consider a top dressing of Nitrogen to boost growth.';
+          } else if (crop === 'Rice' && predictedYield > 75) {
+            fertilizerRec = 'High yield potential detected. Ensure adequate Potassium application during the flowering stage.';
+          }
+          document.getElementById('result-location').textContent = location;
+          document.getElementById('result-crop').textContent = crop;
+          document.getElementById('predicted-yield').textContent = predictedYield;
+          document.getElementById('weather-temp').textContent = `${temp}°C`;
+          document.getElementById('weather-humidity').textContent = `${humidity}%`;
+          document.getElementById('weather-rainfall').textContent = `${rainfall} mm`;
+          document.getElementById('soil-moisture').textContent = `${soilMoisture}%`;
+          document.getElementById('rec-irrigation').textContent = irrigationRec;
+          document.getElementById('rec-fertilizer').textContent = fertilizerRec;
+
+          showYieldScreen(predictionScreen);
+        }, 2000);
+      });
+
+      backButton.addEventListener('click', () => {
+        predictionForm.reset();
+        recommendationStatus.textContent = '';
+        submitBtn.disabled = true;
+        submitBtn.classList.add('bg-green-400', 'cursor-not-allowed');
+        submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+        showYieldScreen(inputScreen);
+      });
+
+
+      // --- CROP HEALTH LOGIC ---
+      cropPhotoUpload.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          healthResultSection.classList.add('hidden');
+          healthCheckLoader.classList.add('flex');
+          healthCheckLoader.classList.remove('hidden');
+
+          const reader = new FileReader();
+          reader.onload = function(event) {
+              imagePreview.src = event.target.result;
+          }
+          reader.readAsDataURL(file);
+
+          setTimeout(() => {
+              const conditions = ["Healthy", "Minor Nutrient Deficiency", "Early signs of fungal infection"];
+              const soils = ["Soil appears balanced", "Low nitrogen detected in soil", "Soil moisture is optimal"];
+              const recommendations = ["Continue current schedule.", "Consider a nitrogen-rich fertilizer.", "Apply a broad-spectrum fungicide as a precaution."];
+
+              const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+              const randomSoil = soils[Math.floor(Math.random() * soils.length)];
+              const randomRec = recommendations[Math.floor(Math.random() * recommendations.length)];
+              
+              healthAnalysisText.innerHTML = `
+                <p class="mb-2"><strong class="font-medium text-gray-800">Crop Status:</strong> ${randomCondition}</p>
+                <p class="mb-2"><strong class="font-medium text-gray-800">Soil Analysis:</strong> ${randomSoil}</p>
+                <p><strong class="font-medium text-gray-800">Recommendation:</strong> ${randomRec}</p>
+              `;
+
+              healthCheckLoader.classList.remove('flex');
+              healthCheckLoader.classList.add('hidden');
+              healthResultSection.classList.remove('hidden');
+          }, 2500);
+      });
+
+    });
+  </script>
+</body>
+</html>
